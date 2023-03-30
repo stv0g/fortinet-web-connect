@@ -1,0 +1,88 @@
+{% extends "layout.html.j2" %}
+
+{% block body %}
+{% if connected %}
+<h3>Status</h3>
+
+<table class="table  table-sm">
+	<thead>
+		<tr>
+			<th scope="col">Key</th>
+			<th scope="col">Value</th>
+		</tr>
+	</thead>
+	<tbody>
+{% if connected_timestamp and connected_time %}
+		<tr>
+			<td>Connected since</td>
+			<td>{{ connected_timestamp.strftime('%Y-%m-%d %H:%M:%S') }} ({{ connected_time | naturaldelta }})</td>
+		</tr>
+{% endif %}
+{% if current_user %}
+		<tr>
+			<td>Current user</td>
+			<td>{{ current_user }}</td>
+		</t	r>
+{% endif %}
+{% if interface %}
+		<tr>
+			<td>Interface name & index</td>
+			<td>{{ interface.ifname }} ({{ interface.ifindex }})</td>
+		</tr>
+		<tr>
+			<td>Flags</td>
+			<td>{{ interface.flags | join(', ') }}</td>
+		</tr>
+		<tr>
+			<td>MTU</td>
+			<td>{{ interface.mtu }} Bytes</td>
+		</tr>
+		<tr>
+			<td>Group</td>
+			<td>{{ interface.group }}</td>
+		</tr>
+		<tr>
+			<td>Address</td>
+			<td>{{ interface.addr_info[0].local }}/{{ interface.addr_info[0].prefixlen }}</td>
+		</tr>
+		<tr>
+			<td>Bytes sent / received</td>
+			<td>{{ interface.stats64.tx.bytes | naturalsize }} / {{ interface.stats64.rx.bytes | naturalsize }}</td>
+		</tr>
+{% endif %}
+	</tbody>
+</table>
+
+{% if routes %}
+<h4>Routes</h4>
+<ul>
+{% for route in routes %}
+	<li>{{ route.dst }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+<form class="mt-3" method="post" action="/disconnect">
+  <button type="submit" class="btn btn-primary">Disconnect</button>
+</form>
+{% else %}
+<h3>Connect</h3>
+<form class="mt-3" method="post" action="/connect">
+	<div class="form-group">
+		<label for="username">Username</label>
+		<input type="text" class="form-control" id="username" name="username" placeholder="FirstnameLastname">
+	</div>
+	<div class="row">
+		<div class="col">
+			<label for="password">Password</label>
+			<input type="password" class="form-control" id="password" name="password">
+		</div>
+		<div class="col col-md-2">
+			<label for="token">TOTP Token</label>
+			<input type="password" class="form-control" id="token" name="token">
+		</div>
+	</div>
+	<button type="submit" class="btn btn-primary mt-3">Connect</button>
+</form>
+{% endif %}
+{% endblock %}
