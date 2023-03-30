@@ -54,19 +54,12 @@ def naturalsize(s):
 def naturaldelta(s):
     return humanize.naturaldelta(s)
 
-def setup():
-    global current_pid
-    
-    logging.info("Configuring IP forwarding")
-    subprocess.run(["sysctl", "net.ipv4.ip_forward=1"])
-    
+def get_current_pid() -> int:
     try:
         with open(PID_FILE, "r") as f:
-            current_pid = int(f.read())
-        
-        logging.info("OpenConnect is already running with PID: %d", current_pid)
+            return int(f.read())
     except:
-        logging.info("OpenConnect is not already running yet")
+        return None
 
 def get_status_interface():
     cp = subprocess.run(["ip",
@@ -146,7 +139,11 @@ def openconnect_connect(username: str, password: str, token: str):
     if process.returncode != 0:
         raise Exception("Failed to start openconnect")
 
+    logging.info("Placing device %s in interface group %s", INTERFACE_NAME, INTERFACE_GROUP)
     subprocess.run(["ip", "link", "set", INTERFACE_NAME, "group", INTERFACE_GROUP])
+
+    logging.info("Configuring IP forwarding")
+    subprocess.run(["sysctl", "net.ipv4.ip_forward=1"])
 
     with open(PID_FILE, "r") as f:
         current_pid = int(f.read())
@@ -168,7 +165,11 @@ def openconnect_disconnect():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    setup()
+    current_pid = get_current_pid()
+    if current_pid:
+        logging.info("OpenConnect is already running with PID: %d", current_pid)
+    else:
+        logging.info("OpenConnect is not already running yet")
 
     app.run(
         host="::",
