@@ -8,6 +8,7 @@ import logging
 import psutil
 import signal
 import subprocess
+import time
 from datetime import datetime
 
 from flask import Flask, render_template, request, redirect
@@ -40,7 +41,7 @@ def connect():
     token = request.form.get("token")
 
     openconnect_connect(username, password, token)
-    
+
     return redirect("/", code=302)
 
 @app.route("/disconnect", methods=["POST"])
@@ -74,7 +75,7 @@ def get_status_interface():
 
     if cp.returncode == 0:
         interface = json.loads(cp.stdout)
-        
+
         if len(interface) == 1:
             return interface[0]
 
@@ -87,10 +88,12 @@ def get_status_routes():
 
     if cp.returncode == 0:
         routes = json.loads(cp.stdout)
-        
+
         return [r for r in routes if r["dev"] == INTERFACE_NAME]
 
-def get_status():    
+def get_status():
+    global current_pid
+
     status = {
         "connected": current_pid is not None,
         "current_user": current_user,
@@ -107,17 +110,20 @@ def get_status():
         })
 
     if current_pid is not None:
-        proc = psutil.Process(current_pid)
+        try:
+            proc = psutil.Process(current_pid)
 
-        create_ts = datetime.fromtimestamp(proc.create_time())
+            create_ts = datetime.fromtimestamp(proc.create_time())
 
-        status.update({
-            "pid": current_pid,
-            "connected_timestamp": create_ts,
-            "connected_time": datetime.now() - create_ts,
-        })
+            status.update({
+                "pid": current_pid,
+                "connected_timestamp": create_ts,
+                "connected_time": datetime.now() - create_ts,
+            })
+        except psutil.NoSuchProcess:
+            current_pid = None
 
-    return status    
+    return status
 
 def openconnect_connect(username: str, password: str, token: str):
     global current_user
@@ -142,6 +148,8 @@ def openconnect_connect(username: str, password: str, token: str):
     if process.returncode != 0:
         raise Exception("Failed to start openconnect")
 
+    time.sleep(1)
+
     logging.info("Placing device %s in interface group %s", INTERFACE_NAME, INTERFACE_GROUP)
     subprocess.run(["ip", "link", "set", INTERFACE_NAME, "group", INTERFACE_GROUP])
 
@@ -150,7 +158,7 @@ def openconnect_connect(username: str, password: str, token: str):
 
     with open(PID_FILE, "r") as f:
         current_pid = int(f.read())
-        
+
     current_user = username
 
 def openconnect_disconnect():
