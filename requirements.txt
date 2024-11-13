@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2023 Steffen Vogel <post@steffenvogel.de>
 # SPDX-License-Identifier: Apache-2.0
 
-Flask==3.0.3
+Flask==3.1.0
 humanize
 psutil
